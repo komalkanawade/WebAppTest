@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Web;
 using System.Web.UI;
@@ -39,14 +40,14 @@ namespace WebAppTest
                 gvEmployee.DataBind();
             }
         }
-
+      
         protected void btnSubmit_Click(object sender, EventArgs e)
         {
             // Get input values
             int employeeCode = Convert.ToInt32(txtEmployeeCode.Text);
             string employeeName = txtEmployeeName.Text;
-            string dateOfBirth = txtDateOfBirth.Text;
-            string gender = rbMale.Checked ? "Male" : "Female";
+            DateTime dateOfBirth = Convert.ToDateTime(txtDateOfBirth.Text);
+            string gender = rbMale.Checked ? "1" : "0";  // Assuming 1 = Male, 0 = Female
             string department = txtDepartment.Text;
             string designation = txtDesignation.Text;
             double basicSalary = Convert.ToDouble(txtBasicSalary.Text);
@@ -71,12 +72,33 @@ namespace WebAppTest
             // Calculate Total Salary
             double totalSalary = basicSalary + dearnessAllowance + conveyanceAllowance + houseRentAllowance - pt;
 
-            // Add data to the DataTable
+            // Insert data into SQL Database
+            string connectionString = System.Configuration.ConfigurationManager.ConnectionStrings["ConnectionString"].ConnectionString;
+            using (SqlConnection con = new SqlConnection(connectionString))
+            {
+                string query = "INSERT INTO Employee (EmployeeCode, EmployeeName, DateOfBirth, Gender, Department, Designation, BasicSalary) " +
+                               "VALUES (@EmployeeCode, @EmployeeName, @DateOfBirth, @Gender, @Department, @Designation, @BasicSalary)";
+
+                SqlCommand cmd = new SqlCommand(query, con);
+                cmd.Parameters.AddWithValue("@EmployeeCode", employeeCode);
+                cmd.Parameters.AddWithValue("@EmployeeName", employeeName);
+                cmd.Parameters.AddWithValue("@DateOfBirth", dateOfBirth);
+                cmd.Parameters.AddWithValue("@Gender", gender);
+                cmd.Parameters.AddWithValue("@Department", department);
+                cmd.Parameters.AddWithValue("@Designation", designation);
+                cmd.Parameters.AddWithValue("@BasicSalary", basicSalary);
+
+                con.Open();
+                cmd.ExecuteNonQuery();
+                con.Close();
+            }
+
+            // Add data to the DataTable for display (this doesn't affect SQL DB)
             DataRow row = EmployeeTable.NewRow();
             row["EmployeeCode"] = employeeCode;
             row["EmployeeName"] = employeeName;
-            row["DateOfBirth"] = dateOfBirth;
-            row["Gender"] = gender;
+            row["DateOfBirth"] = dateOfBirth.ToString("yyyy-MM-dd");
+            row["Gender"] = gender == "1" ? "Male" : "Female";
             row["Department"] = department;
             row["Designation"] = designation;
             row["BasicSalary"] = basicSalary;
@@ -107,5 +129,6 @@ namespace WebAppTest
             txtDesignation.Text = "";
             txtBasicSalary.Text = "";
         }
+       
     }
 }
